@@ -4,7 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Playables;
+
+#if HAS_TIMELINE
 using UnityEngine.Timeline;
+#endif
 
 namespace DDSSequencer.Runtime
 {
