@@ -1,0 +1,22 @@
+{
+    "name": "DDSSequencer.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:f06555f75b070af458a003d92f9efb00"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.timeline",
+            "expression": "1.4.8",
+            "define": "HAS_TIMELINE"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -1,0 +1,17 @@
+{
+  "author": "torinos",
+  "dependencies": {
+    "com.unity.editorcoroutines": "1.0.0"
+  },
+  "description": "Convert and streaming image sequence using BCn pixel format",
+  "displayName": "DDS Senquencer",
+  "keywords": [
+    "unity"
+  ],
+  "license": "MIT",
+  "name": "jp.torinos.ddssequencer",
+  "repository": "github:torinos-yt/DDSSequencer",
+  "unity": "2020.3",
+  "unityRelease": "3f1",
+  "version": "0.1.0"
+}

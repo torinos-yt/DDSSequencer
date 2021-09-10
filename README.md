@@ -1,0 +1,55 @@
+DDS Sequencer
+==============================
+**DDS Sequencer** is small module that convert and playing back image sequence in [DDS format](https://docs.microsoft.com/en-us/windows/win32/direct3ddds/dx-graphics-dds-pguide) including compressed pixel data([BCn](https://docs.microsoft.com/en-us/windows/win32/direct3d11/texture-block-compression-in-direct3d-11)) to its own format(`.ddssc`, `.ddsmeta`).
+
+DDS format is a compressed format that is decoded by the GPU, allowing for fast loading and high quality appearance as a sequence through frame-by-frame compression.
+
+This is a small and simple solution for playback image sequence and does not meet the requirements for high performance, high precision video playback. If you want these, consider playing back video with Hap codec or NotchLC codec and more.
+
+Requirements
+==============================
+- Unity 2020.3 or latar
+- [NVIDIA Texture Tools Exporter](https://developer.nvidia.com/nvidia-texture-tools-exporter)(Windows 64bit Only)
+
+Currently, this is only tested on `Windows 64bit`.
+
+Install
+==============================
+It can be installed by adding scoped registry to the manifest file(Packages/manifest.json).
+
+`scopedRegistries`
+````
+{
+    "name": "torinos",
+    "url": "https://registry.npmjs.com",
+    "scopes": ["jp.torinos"]
+}
+````
+`dependencies`
+````
+"jp.torinos.ddssequencer": "0.1.0"
+````
+
+How to convert image sequence
+=============================
+To convert the image sequence, use the tool that can be opened from `Window>DDS Sequencer>Sequence Converter` in Unity Editor.  
+![tool](https://i.imgur.com/qTWxppd.png)
+
+### Path Settings
+- **Source Sequence Directory** : Specify the path to the folder containing the source image sequence. Accepts images in some major formats supported by the NVIDIA Texture Tools Exporter.
+- **Save Directory** : Specify the path of the folder where the converted asset will be saved. Even if the directory does not exist at the time of execution, it will be created including subdirectories.
+
+### Export Settings
+- **Compress Format** : Specify the texture [compression format for dds](https://i.imgur.com/qTWxppd.png).
+- **Compress Quality** : Specify the compression quality settings in dds, but if you set it to `Production or higher`, it will be processed by the CPU encoder, making it very slow.
+- **Use CUDA** : Specify whether CUDA should be used for the compression process. However, as mentioned above, if you set Compress Quality to Production or higher, this setting will be ignored and proceed by the CPU encoder.
+- **Flip Verticaly** : Flips the image upside down, `it is always good to enable for Unity`.
+- **Generate Mips** : When enabled, the mipmap will be generated at the same time as the dds conversion. Note that this will result in a increase CPU load during playback image sequence.
+- **Delete Temp Files** : Delete a group of intermediate files (converted dds images) created during the conversion pipeline at the end of the process.  
+- **Frame Rate** : Specifies the frame rate of the sequence.
+
+How to specify image sequence
+============================
+Specify a folder that contains converted sequence(`.ddssc`) and meta information(`.ddsmeta`) as Sequence Path of Sequence Player component.
+
+The specified folder should contain **only a single .ddsmeta file and the converted sequence at the same time**.
