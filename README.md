@@ -40,7 +40,7 @@ To convert the image sequence, use the tool that can be opened from `Window>DDS 
 - **Save Directory** : Specify the path of the folder where the converted asset will be saved. Even if the directory does not exist at the time of execution, it will be created including subdirectories.
 
 ### Export Settings
-- **Compress Format** : Specify the texture [compression format for dds](https://docs.microsoft.com/en-us/windows/win32/direct3d11/texture-block-compression-in-direct3d-11).
+- **Compress Format** : Specify the texture [compression format for dds](https://i.imgur.com/qTWxppd.png).
 - **Compress Quality** : Specify the compression quality settings in dds, but if you set it to `Production or higher`, it will be processed by the CPU encoder, making it very slow.
 - **Use CUDA** : Specify whether CUDA should be used for the compression process. However, as mentioned above, if you set Compress Quality to Production or higher, this setting will be ignored and proceed by the CPU encoder.
 - **Flip Verticaly** : Flips the image upside down, `it is always good to enable for Unity`.

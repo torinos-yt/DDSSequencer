@@ -1,8 +1,8 @@
 {
   "dependencies": {
-    "com.unity.ide.vscode": "1.2.3",
-    "com.unity.render-pipelines.universal": "10.4.0",
-    "com.unity.timeline": "1.4.8",
+    "com.unity.ide.vscode": "1.2.5",
+    "com.unity.render-pipelines.universal": "13.1.8",
+    "com.unity.timeline": "1.7.1",
     "com.unity.ugui": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
