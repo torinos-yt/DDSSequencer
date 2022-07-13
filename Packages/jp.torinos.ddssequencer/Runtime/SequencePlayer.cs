@@ -19,6 +19,14 @@ public sealed class SequencePlayer : MonoBehaviour, ITimeControl, IPropertyPrevi
 public sealed class SequencePlayer : MonoBehaviour
 #endif
 {
+    #region Play Mode
+    public enum PlayMode
+    {
+        Time,
+        Frame
+    }
+    #endregion // Play Mode
+
     #region Serialize field
     [SerializeField] string _sequencePath = "";
 
@@ -27,11 +35,14 @@ public sealed class SequencePlayer : MonoBehaviour
 
     [SerializeField] RenderTexture _targetTexture;
 
+    [SerializeField] PlayMode _playMode;
     [SerializeField] float _speed = 1.0f;
     [SerializeField] bool _playOnAwake = false;
     [SerializeField] bool _loop = false;
 
     [SerializeField] float _time = 0f;
+
+    [SerializeField] bool _allFrameCache = false;
     #endregion
 
     #region Private field
@@ -42,11 +53,15 @@ public sealed class SequencePlayer : MonoBehaviour
     int _indexTime => Mathf.FloorToInt(_time * _fps);
     int _prevIndexTime = 0;
     bool _timeline;
+    bool _cachingFrame;
 
     Texture2D _texture;
     MaterialPropertyBlock _prop;
 
     string[] _frames;
+    byte[][] _cachedFrames;
+    bool _finishCaching = false;
+
     (Vector2Int size, int fps, TextureFormat format, bool mips) _frameInfo;
     #endregion // Private field
 
@@ -115,7 +130,10 @@ public sealed class SequencePlayer : MonoBehaviour
     #region MonoBehabiour method implemetation
     void Start()
     {
-        InitSequence();
+        _cachingFrame = _allFrameCache;
+        _finishCaching = !_allFrameCache;
+        InitSequence(_cachingFrame);
+
         if(_playOnAwake) IsPlaying = true;
     }
 
@@ -123,12 +141,17 @@ public sealed class SequencePlayer : MonoBehaviour
     {
         if(IsValid && IsPlaying && Application.isPlaying && !_timeline)
         {
-            CurrentTime += Time.deltaTime * Speed;
-        } 
+            if(_playMode == PlayMode.Time)
+                CurrentTime += Time.deltaTime * Speed;
+            else
+                CurrentTime = (_indexTime + 1) / (float)_fps + .001f;
+        }
     }
 
     void OnDestroy()
     {
+        _cachedFrames = null;
+
         if(_texture == null) return;
         
         if(Application.isPlaying)
@@ -173,10 +196,19 @@ public sealed class SequencePlayer : MonoBehaviour
     #region  Private method
     async void LoadCurrentFrame()
     {
-        byte[] bytes = await Task.Run(() =>
+        byte[] bytes = new byte[0];
+        
+        if(!_cachingFrame || !Application.isPlaying)
         {
-            return File.ReadAllBytes(_frames[_indexTime]);
-        });
+            bytes = await Task.Run(() =>
+            {
+                return File.ReadAllBytes(_frames[_indexTime]);
+            });
+        }
+        else if(_finishCaching)
+        {
+            bytes = _cachedFrames[_indexTime];
+        }
 
         if(_texture == null) return;
 
@@ -199,8 +231,8 @@ public sealed class SequencePlayer : MonoBehaviour
             Graphics.Blit(_texture, _targetTexture);
     }
 
-    void InitSequence()
-    {        
+    async void InitSequence(bool cacheFrame = false)
+    {
         var path = _sequencePath;
         if(path.Contains("StreamingAssets"))
             path = Application.streamingAssetsPath + _sequencePath.Substring(_sequencePath.IndexOf("StreamingAssets") + "StreamingAssets".Length);
@@ -238,6 +270,33 @@ public sealed class SequencePlayer : MonoBehaviour
         _duration = _numFrames / (float)_fps;
 
         OnDestroy();
+
+        if(cacheFrame && Application.isPlaying)
+        {
+            _cachingFrame = true;
+            _finishCaching = false;
+
+            _cachedFrames = new byte[_numFrames][];
+
+            await Task.Run(() =>
+            {
+                Enumerable.Range(0, _numFrames)
+                    .AsParallel()
+                    .WithDegreeOfParallelism(4)
+                    .ForAll(n =>
+                {
+                    _cachedFrames[n] = File.ReadAllBytes(_frames[n]);
+                });
+            });
+
+            _finishCaching = true;
+        }
+        else
+        {
+            _cachingFrame = false;
+            _finishCaching = false;
+        }
+
         _texture = new Texture2D(_frameInfo.size.x, _frameInfo.size.y, _frameInfo.format, false);
         _texture.wrapMode = TextureWrapMode.Clamp;
         _texture.hideFlags = HideFlags.DontSave;
@@ -249,7 +308,7 @@ public sealed class SequencePlayer : MonoBehaviour
     }
     #endregion // Private method
 
-    #region Public API method 
+    #region Public API method
     public void Play()
     {
         if(_indexTime >= _numFrames - 1)
@@ -274,10 +333,10 @@ public sealed class SequencePlayer : MonoBehaviour
         CurrentTime = 0;
     }
 
-    public void OpenSequenceFromDirectory(string seqauencePath)
+    public void OpenSequenceFromDirectory(string seqauencePath, bool cacheFrame = false)
     {
         _sequencePath = seqauencePath;
-        InitSequence();
+        InitSequence(cacheFrame);
     }
     #endregion // Public API Method
 }

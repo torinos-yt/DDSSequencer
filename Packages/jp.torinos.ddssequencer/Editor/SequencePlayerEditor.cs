@@ -15,10 +15,12 @@ sealed class SequencePlayerEditor : UnityEditor.Editor
 
     SerializedProperty _targetTexture;
 
+    SerializedProperty _playMode;
     SerializedProperty _playOnAwake;
     SerializedProperty _loop;
     SerializedProperty _speed;
 
+    SerializedProperty _cacheFrame;
     SequencePlayer _player;
 
     void OnEnable()
@@ -30,9 +32,12 @@ sealed class SequencePlayerEditor : UnityEditor.Editor
 
         _targetTexture = serializedObject.FindProperty("_targetTexture");
 
+        _playMode = serializedObject.FindProperty("_playMode");
         _playOnAwake = serializedObject.FindProperty("_playOnAwake");
         _loop = serializedObject.FindProperty("_loop");
         _speed = serializedObject.FindProperty("_speed");
+
+        _cacheFrame = serializedObject.FindProperty("_allFrameCache");
 
         _player = target as SequencePlayer;
         _player.OpenSequenceFromDirectory(_seqDirectory.stringValue);
@@ -90,7 +95,13 @@ sealed class SequencePlayerEditor : UnityEditor.Editor
 
         EditorGUILayout.PropertyField(_playOnAwake, new GUIContent("Play On Awake"));
         EditorGUILayout.PropertyField(_loop, new GUIContent("Loop"));
-        _speed.floatValue = EditorGUILayout.Slider("Play Speed", _speed.floatValue, -5f, 5f);
+        EditorGUILayout.PropertyField(_cacheFrame, new GUIContent("Caching All Frame"));
+        EditorGUILayout.Space(5);
+
+        EditorGUILayout.PropertyField(_playMode, new GUIContent("Play Mode"));
+
+        if(_playMode.intValue == 0)
+            _speed.floatValue = EditorGUILayout.Slider("Play Speed", _speed.floatValue, -5f, 5f);
 
         serializedObject.ApplyModifiedProperties();
     }
