@@ -10,15 +10,26 @@ using CompressQuality = TextureConverter.DDSCompressQuality;
 
 public sealed class SeqnenceConverterWindow : EditorWindow
 {
+    public enum SequenceSource
+    {
+        Movie,
+        Sequence
+    }
+
     static string StoredSrcDirectory;
-    [SerializeField] string _srcDirectoryPath;
+    [SerializeField] string _srcPath;
 
     static string StoredOutDirectory;
     [SerializeField] string _outDirectoryPath;
-    [SerializeField] string _srcDirectoryInfo;
+    [SerializeField] string _srcInfo;
 
     const string DefaultNVTTPath = "C:\\Program Files\\NVIDIA Corporation\\NVIDIA Texture Tools Exporter\\nvtt_export.exe";
+    const string DefaultNVTTPath2 = "C:\\Program Files\\NVIDIA Corporation\\NVIDIA Texture Tools\\nvtt_export.exe";
     [SerializeField] string _nvttPath;
+
+    [SerializeField] bool _pathToffmpeg;
+
+    [SerializeField] SequenceSource _source = SequenceSource.Movie;
 
     [SerializeField] CompressFormat _format = CompressFormat.BC7;
     [SerializeField] CompressQuality _quality = CompressQuality.Normal;
@@ -26,6 +37,7 @@ public sealed class SeqnenceConverterWindow : EditorWindow
     [SerializeField] bool _useCuda = true;
     [SerializeField] bool _mips = false;
     [SerializeField] bool _deleteTmp = true;
+    [SerializeField] bool _existffmpeg = true;
 
     [SerializeField] int _fps = 30;
 
@@ -36,6 +48,21 @@ public sealed class SeqnenceConverterWindow : EditorWindow
     {
         var window = GetWindow<SeqnenceConverterWindow>("Sequence Converter");
         window.minSize = new Vector2(480, 440);
+
+        try
+        {
+            var info = new System.Diagnostics.ProcessStartInfo();
+            info.FileName = "ffmpeg";
+            info.Arguments = "-version";
+            info.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+
+            System.Diagnostics.Process.Start(info);
+            window._existffmpeg = true;
+        }
+        catch(System.ComponentModel.Win32Exception)
+        {
+            window._existffmpeg = false;
+        }
     }
 
     public void OnGUI()
@@ -63,16 +90,46 @@ public sealed class SeqnenceConverterWindow : EditorWindow
         EditorGUILayout.LabelField("Path Settings", _boldLabel);
 
         EditorGUI.indentLevel++;
-        EditorGUILayout.LabelField("Source Sequence Directory" + _srcDirectoryInfo);
+        EditorGUI.BeginChangeCheck();
+        _source = (SequenceSource)EditorGUILayout.EnumPopup("Source Type", _source, GUILayout.Width(250));
+        EditorGUILayout.LabelField((_source == SequenceSource.Sequence ? "Source Sequence Directory" : "Source File") + _srcInfo);
+
+        if(EditorGUI.EndChangeCheck() && _source == SequenceSource.Movie)
+        {
+            try
+            {
+                var info = new System.Diagnostics.ProcessStartInfo();
+                info.FileName = "ffmpeg";
+                info.Arguments = "-version";
+                info.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+
+                System.Diagnostics.Process.Start(info);
+                _existffmpeg = true;
+            }
+            catch(System.ComponentModel.Win32Exception)
+            {
+                _existffmpeg = false;
+            }
+        }
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            _srcDirectoryPath = EditorGUILayout.TextField(_srcDirectoryPath);
-
-            if(GUILayout.Button("Select", GUILayout.Width(80)))
+            if(_existffmpeg)
             {
-                _srcDirectoryPath = EditorUtility.OpenFolderPanel("Open",  Application.dataPath, string.Empty);
-                CheckDirectoryPath();
+                _srcPath = EditorGUILayout.TextField(_srcPath);
+
+                if(GUILayout.Button("Select", GUILayout.Width(80)))
+                {
+                    _srcPath = _source == SequenceSource.Sequence ?
+                                            EditorUtility.OpenFolderPanel("Open", Application.dataPath, string.Empty) :
+                                            EditorUtility.OpenFilePanel("Open", Application.dataPath, string.Empty);
+
+                    CheckDirectoryPath();
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField("ffmpeg is Not Found", _boldLabel);
             }
         }
 
@@ -86,7 +143,7 @@ public sealed class SeqnenceConverterWindow : EditorWindow
 
             if(GUILayout.Button("Select", GUILayout.Width(80)))
             {
-                _outDirectoryPath = EditorUtility.OpenFolderPanel("Open",  Application.dataPath, string.Empty);
+                _outDirectoryPath = EditorUtility.OpenFolderPanel("Open", Application.dataPath, string.Empty);
             }
         }
 
@@ -99,7 +156,10 @@ public sealed class SeqnenceConverterWindow : EditorWindow
 
         EditorGUI.indentLevel++;
 
-        if(!System.IO.File.Exists(DefaultNVTTPath))
+        bool path1 = System.IO.File.Exists(DefaultNVTTPath);
+        bool path2 = System.IO.File.Exists(DefaultNVTTPath2);
+
+        if(!path1 && !path2)
         {
             EditorGUILayout.LabelField("Application Path");
             using (new EditorGUILayout.HorizontalScope())
@@ -114,7 +174,7 @@ public sealed class SeqnenceConverterWindow : EditorWindow
         }
         else
         {
-            _nvttPath = DefaultNVTTPath;
+            _nvttPath = path1? DefaultNVTTPath : DefaultNVTTPath2;
         }
 
         EditorGUILayout.Space(2);
@@ -159,35 +219,38 @@ public sealed class SeqnenceConverterWindow : EditorWindow
 
     void DrawProcessButton()
     {
-        if(GUILayout.Button("Proceed"))
+        using(new EditorGUI.DisabledGroupScope(!_existffmpeg && _source == SequenceSource.Movie))
         {
+            if(GUILayout.Button("Proceed"))
+            {
 
 #if UNITY_EDITOR_WIN
-            if(!System.IO.File.Exists(_nvttPath))
-            {
-                Debug.LogError("Error : NVIDIA Texture Tools Exporter is Not Found");
-                return;
-            }
+                if(!System.IO.File.Exists(_nvttPath))
+                {
+                    Debug.LogError("Error : NVIDIA Texture Tools Exporter is Not Found");
+                    return;
+                }
 #endif
 
-            TextureConverter.Process(_srcDirectoryPath, _outDirectoryPath, _nvttPath, new TextureConverter.ExportSetting
-            {
-                format = _format,
-                quality = _quality,
-                useCuda = _useCuda,
-                mips = _mips,
-                yFlip = _yFlip,
-                deleteTmp = _deleteTmp,
-                fps = _fps
-            });
-        }
+                TextureConverter.Process(_srcPath, _outDirectoryPath, _nvttPath, new TextureConverter.ExportSetting
+                {
+                    format = _format,
+                    quality = _quality,
+                    useCuda = _useCuda,
+                    mips = _mips,
+                    yFlip = _yFlip,
+                    deleteTmp = _deleteTmp,
+                    fps = _fps
+                }, _source);
+            }
 
-        EditorGUILayout.Space(2);
-        using(new EditorGUI.DisabledGroupScope(!TextureConverter.IsProceeding))
-        {
-            if(GUILayout.Button("Stop"))
+            EditorGUILayout.Space(2);
+            using(new EditorGUI.DisabledGroupScope(!TextureConverter.IsProceeding))
             {
-                TextureConverter.StopProcess();
+                if(GUILayout.Button("Stop"))
+                {
+                    TextureConverter.StopProcess();
+                }
             }
         }
     }
@@ -203,13 +266,23 @@ public sealed class SeqnenceConverterWindow : EditorWindow
             rect.y = 0;
             rect.height = EditorGUIUtility.singleLineHeight * 1.5f;
 
-            if(TextureConverter.IsOptProcess)
+            if(TextureConverter.IsffmpegProcess)
             {
-                GUI.Label(rect, $"2/2 Proceeding Asset Optimize.... {TextureConverter.CompleteCount} / {TextureConverter.Count}");
+                GUI.Label(rect, $"1/3 Proceeding Movie Convert....");
+            }
+            else if(TextureConverter.IsOptProcess)
+            {
+                if(_source == SequenceSource.Sequence)
+                    GUI.Label(rect, $"2/2 Proceeding Asset Optimize.... {TextureConverter.CompleteCount} / {TextureConverter.Count}");
+                else
+                    GUI.Label(rect, $"3/3 Proceeding Asset Optimize.... {TextureConverter.CompleteCount} / {TextureConverter.Count}");
             }
             else if(TextureConverter.IsDdsProcess)
             {
-                GUI.Label(rect, $"1/2 Proceeding dds Convert on NVIDIA Texture Tools Exporter.... ");
+                if(_source == SequenceSource.Sequence)
+                    GUI.Label(rect, $"1/2 Proceeding dds Convert on NVIDIA Texture Tools Exporter.... ");
+                else
+                    GUI.Label(rect, $"2/3 Proceeding dds Convert on NVIDIA Texture Tools Exporter.... ");
             }
         }
     }
@@ -222,7 +295,7 @@ public sealed class SeqnenceConverterWindow : EditorWindow
             normal = new GUIStyleState(){textColor = Color.grey * 1.5f}
         };
         
-        _srcDirectoryPath = StoredSrcDirectory ?? _srcDirectoryPath;
+        _srcPath = StoredSrcDirectory ?? _srcPath;
         _outDirectoryPath = StoredOutDirectory ?? _outDirectoryPath;
 
         CheckDirectoryPath();
@@ -230,7 +303,7 @@ public sealed class SeqnenceConverterWindow : EditorWindow
 
     public void OnDisable()
     {
-        StoredSrcDirectory = _srcDirectoryPath;
+        StoredSrcDirectory = _srcPath;
         StoredOutDirectory = _outDirectoryPath;
 
         TextureConverter.StopProcess();
@@ -238,16 +311,23 @@ public sealed class SeqnenceConverterWindow : EditorWindow
 
     void CheckDirectoryPath()
     {
-        if(!System.IO.Directory.Exists(_srcDirectoryPath))
+        if(_source == SequenceSource.Sequence)
         {
-            _srcDirectoryInfo = "";
+            if(!System.IO.Directory.Exists(_srcPath))
+            {
+                _srcInfo = "";
+            }
+            else
+            {
+                var files = System.IO.Directory.GetFiles(_srcPath)
+                                                .Where(x => TextureConverter.IsImageFileExtension(x)).ToArray();
+
+                _srcInfo = "      " + files.Length.ToString() + " Files";
+            }
         }
         else
         {
-            var files = System.IO.Directory.GetFiles(_srcDirectoryPath)
-                                            .Where(x => TextureConverter.IsImageFileExtension(x)).ToArray();
-
-            _srcDirectoryInfo = "      " + files.Length.ToString() + " Files";
+            _srcInfo = "";
         }
     }
 }

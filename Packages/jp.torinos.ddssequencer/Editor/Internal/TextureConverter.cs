@@ -10,11 +10,14 @@ using UnityEditor;
 namespace DDSSequencer.Editor.Pipeline
 {
 
+using SourceType = SeqnenceConverterWindow.SequenceSource;
+
 internal static class TextureConverter
 {
     public static int Count { get; private set; }
     public static int CompleteCount { get; private set; }
 
+    public static bool IsffmpegProcess { get; private set; }
     public static bool IsDdsProcess { get; private set; }
     public static bool IsOptProcess { get; private set; }
     public static bool IsProceeding { get; private set; }
@@ -22,6 +25,7 @@ internal static class TextureConverter
     static SeqnenceConverterWindow _window;
 
     static EditorCoroutine PipelineCoroutine = null;
+    static EditorCoroutine ffmpegtCoroutine = null;
     static EditorCoroutine ConvertCoroutine = null;
     static EditorCoroutine OptimizeCoroutine = null;
 
@@ -56,7 +60,7 @@ internal static class TextureConverter
     }
 
     // Entry Point
-    public static void Process(string path, string outPath, string nvttPath, ExportSetting setting)
+    public static void Process(string path, string outPath, string nvttPath, ExportSetting setting, SourceType sourceType)
     {
         if(PipelineCoroutine != null && IsProceeding)
         {
@@ -64,25 +68,47 @@ internal static class TextureConverter
             return;
         }
 
-        if(!Directory.Exists(path))
+        if(sourceType == SourceType.Sequence)
         {
-            Debug.LogError("Error : Directory Not Found");
-            return;
+            if(!Directory.Exists(path))
+            {
+                Debug.LogError("Error : Directory Not Found");
+                return;
+            }
+        }
+        else
+        {
+            if(!File.Exists(path))
+            {
+                Debug.LogError("Error : File Not Found");
+                return;
+            }
         }
 
         _window = SeqnenceConverterWindow.GetWindow<SeqnenceConverterWindow>();
 
-        PipelineCoroutine = 
-            _window.StartCoroutine(Pipeline(path, outPath, nvttPath, setting));
+        PipelineCoroutine =
+            _window.StartCoroutine(Pipeline(path, outPath, nvttPath, setting, sourceType));
     }
 
-    static IEnumerator Pipeline(string path, string outPath, string nvttPath, ExportSetting setting)
+    static IEnumerator Pipeline(string path, string outPath, string nvttPath, ExportSetting setting, SourceType sourceType)
     {
         IsProceeding = true;
+
+        if(sourceType == SourceType.Movie)
+        {
+            IsffmpegProcess = true;
+            _window.Repaint();
+
+            ffmpegtCoroutine = _window.StartCoroutine(ConvertMovie(path, outPath, setting));
+            yield return ffmpegtCoroutine;
+
+            IsffmpegProcess = false;
+        }
         
         Directory.CreateDirectory(outPath + "/dds");
 
-        string[] files = Directory.GetFiles(path)
+        string[] files = Directory.GetFiles(sourceType == SourceType.Sequence ? path : outPath + "/imagesc")
                                 .Where(x => IsImageFileExtension(x)).ToArray();
 
         Count = files.Length;
@@ -104,11 +130,17 @@ internal static class TextureConverter
         // Delete tmp files
         if(setting.deleteTmp)
         {
+            if(sourceType == SourceType.Movie)
+                Directory.Delete(outPath + "/imagesc", true);
+
             Directory.Delete(outPath + "/dds", true);
 
             // Try delete metadata file, if output path is in Unity Asset folder.
             try
             {
+                if(sourceType == SourceType.Movie)
+                    File.Delete(outPath + "/imagesc.meta");
+
                 File.Delete(outPath + "/dds.meta");
             }
             finally
@@ -121,6 +153,26 @@ internal static class TextureConverter
 
         AssetDatabase.Refresh();
         _window.Repaint();
+    }
+
+    static IEnumerator ConvertMovie(string src, string outPath, ExportSetting setting)
+    {
+        Directory.CreateDirectory(outPath + "/imagesc");
+
+        var info = new System.Diagnostics.ProcessStartInfo();
+        info.FileName = "ffmpeg";
+        info.UseShellExecute = false;
+
+        info.Arguments = "-i " + '"' + src + '"' + $" -r {setting.fps} -vcodec png {outPath}/imagesc/img_%06d.png";
+        _process = System.Diagnostics.Process.Start(info);
+
+        while(true)
+        {
+            if(_process.HasExited) break;
+            yield return null;
+        }
+
+        _process = null;
     }
 
     static IEnumerator ConvertTextureSequence(string[] files, string outPath, string nvttPath, ExportSetting setting)
@@ -236,13 +288,16 @@ internal static class TextureConverter
         if(PipelineCoroutine != null)
             EditorCoroutineUtility.StopCoroutine(PipelineCoroutine);
 
+        if(ffmpegtCoroutine != null)
+            EditorCoroutineUtility.StopCoroutine(ffmpegtCoroutine);
+
         if(ConvertCoroutine != null)
             EditorCoroutineUtility.StopCoroutine(ConvertCoroutine);
 
         if(OptimizeCoroutine != null)
             EditorCoroutineUtility.StopCoroutine(OptimizeCoroutine);
 
-        PipelineCoroutine = ConvertCoroutine = OptimizeCoroutine = null;
+        PipelineCoroutine = ffmpegtCoroutine = ConvertCoroutine = OptimizeCoroutine = null;
 
         _process?.Kill();
         _process = null;
@@ -255,7 +310,7 @@ internal static class TextureConverter
 
             try
             {
-                if(_batchPath != null) 
+                if(_batchPath != null)
                 {
                     File.Delete(_batchPath);
                     File.Delete(_batchPath + ".meta");
@@ -268,6 +323,7 @@ internal static class TextureConverter
         });
 
         IsProceeding = false;
+        IsffmpegProcess = false;
         IsDdsProcess = false;
         IsOptProcess = false;
 
