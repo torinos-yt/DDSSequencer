@@ -123,6 +123,7 @@ public sealed class SequencePlayer : MonoBehaviour
     public float Duration => _duration;
     public int FrameCount => _numFrames;
     public int CurrentFrame => _indexTime;
+    public Texture2D Texture => _texture;
 
     public (Vector2Int size, int fps, TextureFormat format, bool mips) FrameInfo => _frameInfo;
     #endregion // Punlic accesible property

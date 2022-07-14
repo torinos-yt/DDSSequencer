@@ -28,7 +28,7 @@ It can be installed by adding scoped registry to the manifest file(Packages/mani
 ````
 `dependencies`
 ````
-"jp.torinos.ddssequencer": "0.2.0"
+"jp.torinos.ddssequencer": "0.2.1"
 ````
 
 How to convert image sequence
