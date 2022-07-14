@@ -120,6 +120,7 @@ public sealed class SequencePlayer : MonoBehaviour
 
     public bool IsPlaying { get; private set; } = false;
     public bool IsValid { get; private set; } = false;
+    public bool IsCacheFinished => _finishCaching;
     public float Duration => _duration;
     public int FrameCount => _numFrames;
     public int CurrentFrame => _indexTime;
