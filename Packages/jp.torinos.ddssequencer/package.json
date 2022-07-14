@@ -11,7 +11,7 @@
   "license": "MIT",
   "name": "jp.torinos.ddssequencer",
   "repository": "github:torinos-yt/DDSSequencer",
-  "unity": "2020.3",
+  "unity": "2021.1",
   "unityRelease": "3f1",
-  "version": "0.1.1"
+  "version": "0.2.0"
 }
