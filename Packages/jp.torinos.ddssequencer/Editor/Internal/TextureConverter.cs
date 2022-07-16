@@ -266,9 +266,11 @@ internal static class TextureConverter
             // Copy to buffer exclude dds header
             byte[] dxtBytes = new byte[bytes.Length - DDS_HEADER_SIZE];
             System.Buffer.BlockCopy(bytes, DDS_HEADER_SIZE, dxtBytes, 0, bytes.Length - DDS_HEADER_SIZE);
+
+            byte[] snapBytes = Snappy.Encode(dxtBytes);
     
             string fileName = Path.GetFileNameWithoutExtension(DdsFiles[i]) + ".ddssc";
-            File.WriteAllBytes(outPath + "/" + fileName, dxtBytes);
+            File.WriteAllBytes(outPath + "/" + fileName, snapBytes);
 
             CompleteCount++;
             _window.Repaint();

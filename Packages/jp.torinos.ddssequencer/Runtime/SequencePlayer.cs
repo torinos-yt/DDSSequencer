@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Playables;
@@ -198,24 +199,31 @@ public sealed class SequencePlayer : MonoBehaviour
     #region  Private method
     async void LoadCurrentFrame()
     {
-        byte[] bytes = new byte[0];
-        
+        IntPtr ptr = IntPtr.Zero;
+        int size = 0;
+
         if(!_cachingFrame || !Application.isPlaying)
         {
-            bytes = await Task.Run(() =>
+            byte[] bytes = await Task.Run(() =>
             {
                 return File.ReadAllBytes(_frames[_indexTime]);
             });
+
+            if(_texture == null) return;
+
+            ptr = Snappy.DecodeToPtr(bytes, out size);
         }
         else if(_finishCaching)
         {
-            bytes = _cachedFrames[_indexTime];
+            ptr = Snappy.DecodeToPtr(_cachedFrames[_indexTime], out size);
         }
 
         if(_texture == null) return;
 
-        _texture.LoadRawTextureData(bytes);
+        _texture.LoadRawTextureData(ptr, size);
         _texture.Apply();
+
+        Marshal.FreeCoTaskMem(ptr);
 
         UpdateTarget();
     }
@@ -299,7 +307,7 @@ public sealed class SequencePlayer : MonoBehaviour
             _finishCaching = false;
         }
 
-        _texture = new Texture2D(_frameInfo.size.x, _frameInfo.size.y, _frameInfo.format, false);
+        _texture = new Texture2D(_frameInfo.size.x, _frameInfo.size.y, _frameInfo.format, _frameInfo.mips);
         _texture.wrapMode = TextureWrapMode.Clamp;
         _texture.hideFlags = HideFlags.DontSave;
 

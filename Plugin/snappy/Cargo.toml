@@ -1,0 +1,16 @@
+[package]
+name = "snappy"
+version = "0.1.0"
+edition = "2021"
+authors = ["torinos"]
+
+[lib]
+name = "snappy"
+crate-type = ["cdylib"]
+
+[dependencies]
+snap = "1"
+
+[profile.release]
+lto = true
+opt-level = 3
