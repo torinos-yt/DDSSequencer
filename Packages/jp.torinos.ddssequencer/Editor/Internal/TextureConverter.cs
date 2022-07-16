@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Unity.EditorCoroutines.Editor;
 using UnityEditor;
+using DDSSequencer.Runtime;
 
 namespace DDSSequencer.Editor.Pipeline
 {
@@ -160,10 +161,12 @@ internal static class TextureConverter
         Directory.CreateDirectory(outPath + "/imagesc");
 
         var info = new System.Diagnostics.ProcessStartInfo();
-        info.FileName = "ffmpeg";
+        info.FileName = "ffprobe";
         info.UseShellExecute = false;
+        info.Arguments = src + " -hide_banner -show_entries format=duration";
+        info.RedirectStandardOutput = true;
+        info.CreateNoWindow = true;
 
-        info.Arguments = "-i " + '"' + src + '"' + $" -r {setting.fps} -vcodec png {outPath}/imagesc/img_%06d.png";
         _process = System.Diagnostics.Process.Start(info);
 
         while(true)
@@ -172,7 +175,26 @@ internal static class TextureConverter
             yield return null;
         }
 
-        _process = null;
+        float.TryParse(_process.StandardOutput.ReadToEnd().Split("\n")[1].Split("=")[1], out var duration);
+        Count = (int)((int)duration * setting.fps);
+
+        info.FileName = "ffmpeg";
+        info.Arguments = "-i " +'"' + src + '"' + $" -r {setting.fps} -vcodec png {outPath}/imagesc/img_%06d.png";
+        info.RedirectStandardOutput = false;
+        info.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+
+        _process = System.Diagnostics.Process.Start(info);
+
+        while(true)
+        {
+            if(_process.HasExited) break;
+
+            CompleteCount = Directory.GetFiles(outPath + "/imagesc").Where(x => Path.GetExtension(x) == ".png").Count();
+            _window.Repaint();
+            yield return new WaitForSecondsRealtime(.5f);
+        }
+
+        CompleteCount = Count = 0;
     }
 
     static IEnumerator ConvertTextureSequence(string[] files, string outPath, string nvttPath, ExportSetting setting)
@@ -190,6 +212,7 @@ internal static class TextureConverter
             batchArgs += @"""" + f  + @"""" + $" /f {(int)(setting.format)} /q {(int)(setting.quality)} /no-mips /dx10";
             if(!setting.useCuda) batchArgs += " /no-cuda";
             if(!setting.mips) batchArgs += " /no-mips";
+            else batchArgs += " /mips";
             if(setting.yFlip) batchArgs += " /save-flip-y";
             batchArgs += @" /o """ + outPath + "/dds/" + fileName + @".dds""";
 
@@ -202,12 +225,18 @@ internal static class TextureConverter
         File.WriteAllText(_batchPath, batchArgs);
 
         info.Arguments = "/b " + _batchPath;
+        info.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
         _process = System.Diagnostics.Process.Start(info);
+
+        Count = files.Length;
 
         while(true)
         {
             if(_process.HasExited) break;
-            yield return null;
+
+            CompleteCount = Directory.GetFiles(outPath + "/dds").Where(x => Path.GetExtension(x) == ".dds").Count();
+            _window.Repaint();
+            yield return new WaitForSecondsRealtime(.5f);
         }
 
         // Avoid IOException
@@ -224,6 +253,8 @@ internal static class TextureConverter
             _batchPath = null;
             _process = null;
         }
+
+        CompleteCount = Count = 0;
     }
 
     static IEnumerator OptimizeDdsSequence(string outPath, ExportSetting setting)
@@ -249,7 +280,7 @@ internal static class TextureConverter
         header[3] = headerByte[17];
         
         // mips
-        header[4] = headerByte[28];
+        header[4] = (byte)(setting.mips ? 1 : 0);
 
         // format
         header[5] = Convert.ToByte((int)setting.format);
@@ -281,8 +312,7 @@ internal static class TextureConverter
         _window.Repaint();
         yield return null;
 
-        Count = 0;
-        CompleteCount = 0;
+        CompleteCount = Count = 0;
     }
 
     public static void StopProcess()

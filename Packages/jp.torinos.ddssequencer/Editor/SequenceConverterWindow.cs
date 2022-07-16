@@ -268,7 +268,7 @@ public sealed class SeqnenceConverterWindow : EditorWindow
 
             if(TextureConverter.IsffmpegProcess)
             {
-                GUI.Label(rect, $"1/3 Proceeding Movie Convert....");
+                GUI.Label(rect, $"1/3 Proceeding Movie Convert.... {TextureConverter.CompleteCount} / {TextureConverter.Count}");
             }
             else if(TextureConverter.IsOptProcess)
             {
@@ -280,9 +280,9 @@ public sealed class SeqnenceConverterWindow : EditorWindow
             else if(TextureConverter.IsDdsProcess)
             {
                 if(_source == SequenceSource.Sequence)
-                    GUI.Label(rect, $"1/2 Proceeding dds Convert on NVIDIA Texture Tools Exporter.... ");
+                    GUI.Label(rect, $"1/2 Proceeding dds Convert on NVIDIA Texture Tools Exporter.... {TextureConverter.CompleteCount} / {TextureConverter.Count}");
                 else
-                    GUI.Label(rect, $"2/3 Proceeding dds Convert on NVIDIA Texture Tools Exporter.... ");
+                    GUI.Label(rect, $"2/3 Proceeding dds Convert on NVIDIA Texture Tools Exporter.... {TextureConverter.CompleteCount} / {TextureConverter.Count}");
             }
         }
     }
