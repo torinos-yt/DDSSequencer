@@ -640,7 +640,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 658a774f597c53744a384d8977de23fc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _sequencePath: C:/Users/Intel/Documents/Dev/DDSSequencer/Assets/StreamingAssets/out
+  _sequencePath: D:/Documents/UnityProject/DDSSequencer/Assets/StreamingAssets/out
   _targetRenderer: {fileID: 1970168362}
   _targetProperty: _BaseMap
   _targetTexture: {fileID: 8400000, guid: 60c6c9d91b3bf0b478bfb99d19bde428, type: 2}
@@ -649,7 +649,7 @@ MonoBehaviour:
   _playOnAwake: 1
   _loop: 1
   _time: 0
-  _allFrameCache: 1
+  _allFrameCache: 0
 --- !u!4 &964063735
 Transform:
   m_ObjectHideFlags: 0
