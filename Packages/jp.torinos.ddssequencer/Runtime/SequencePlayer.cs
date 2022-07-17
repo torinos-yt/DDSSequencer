@@ -21,7 +21,7 @@ public sealed class SequencePlayer : MonoBehaviour
 #endif
 {
     #region Play Mode
-    public enum PlayMode
+    public enum SequncePlayMode
     {
         Time,
         Frame
@@ -36,13 +36,18 @@ public sealed class SequencePlayer : MonoBehaviour
 
     [SerializeField] RenderTexture _targetTexture;
 
-    [SerializeField] PlayMode _playMode;
+    [SerializeField] SequncePlayMode _playMode;
     [SerializeField] float _speed = 1.0f;
     [SerializeField] bool _playOnAwake = false;
     [SerializeField] bool _loop = false;
 
     [SerializeField] float _time = 0f;
 
+    /// <summary>
+    /// This parameter can be changed at any time,
+    /// but the actual playback is reflected
+    /// in the timing of Start() or OpenSequenceFromDirectory().
+    /// </summary>
     [SerializeField] bool _allFrameCache = false;
     #endregion
 
@@ -119,6 +124,23 @@ public sealed class SequencePlayer : MonoBehaviour
         set { _loop = value; }
     }
 
+    public SequncePlayMode PlayMode
+    {
+        get => _playMode;
+        set { _playMode = value; }
+    }
+
+    /// <summary>
+    /// This parameter can be changed at any time,
+    /// but the actual playback is reflected
+    /// in the timing of Start() or OpenSequenceFromDirectory().
+    /// </summary>
+    public bool AllFrameCache
+    {
+        get => _allFrameCache;
+        set { _allFrameCache = value; }
+    }
+
     public bool IsPlaying { get; private set; } = false;
     public bool IsValid { get; private set; } = false;
     public bool IsCacheFinished => _finishCaching;
@@ -144,16 +166,16 @@ public sealed class SequencePlayer : MonoBehaviour
     {
         if(IsValid && IsPlaying && Application.isPlaying && !_timeline)
         {
-            if(_playMode == PlayMode.Time)
+            if(_playMode == SequncePlayMode.Time)
                 CurrentTime += Time.deltaTime * Speed;
             else
-                CurrentTime = (_indexTime + 1) / (float)_fps + .001f;
+                CurrentTime = (_indexTime + 1) / (float)_fps + 1e-4f;
         }
     }
 
     void OnDestroy()
     {
-        _cachedFrames = null;
+        if(_cachedFrames != null) for(int i = 0; i < _cachedFrames.Length; i++) _cachedFrames[i] = null;
 
         if(_texture == null) return;
         
@@ -196,7 +218,7 @@ public sealed class SequencePlayer : MonoBehaviour
     #endif
     #endregion // IPropertyPreview implementation
 
-    #region  Private method
+    #region Private method
     async void LoadCurrentFrame()
     {
         IntPtr ptr = IntPtr.Zero;
@@ -215,10 +237,10 @@ public sealed class SequencePlayer : MonoBehaviour
         }
         else if(_finishCaching)
         {
+            if(_texture == null) return;
+
             ptr = Snappy.DecodeToPtr(_cachedFrames[_indexTime], out size);
         }
-
-        if(_texture == null) return;
 
         _texture.LoadRawTextureData(ptr, size);
         _texture.Apply();
@@ -233,6 +255,8 @@ public sealed class SequencePlayer : MonoBehaviour
         if(_targetRenderer != null)
         {
             _prop ??= new MaterialPropertyBlock();
+
+            _targetRenderer.GetPropertyBlock(_prop);
             _prop.SetTexture(_targetProperty, _texture);
             _targetRenderer.SetPropertyBlock(_prop);
         }
