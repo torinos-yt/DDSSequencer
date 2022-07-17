@@ -227,7 +227,7 @@ public sealed class SeqnenceConverterWindow : EditorWindow
 #if UNITY_EDITOR_WIN
                 if(!System.IO.File.Exists(_nvttPath))
                 {
-                    Debug.LogError("Error : NVIDIA Texture Tools Exporter is Not Found");
+                    Debug.LogError("[DDSSequencer Converter Window] Error : NVIDIA Texture Tools Exporter is Not Found");
                     return;
                 }
 #endif

@@ -65,7 +65,7 @@ internal static class TextureConverter
     {
         if(PipelineCoroutine != null && IsProceeding)
         {
-            Debug.LogError("Error : Proceeding Previous Process");
+            Debug.LogError("[DDSSequencer Converter Window] Error : Proceeding Previous Process");
             return;
         }
 
@@ -73,7 +73,7 @@ internal static class TextureConverter
         {
             if(!Directory.Exists(path))
             {
-                Debug.LogError("Error : Directory Not Found");
+                Debug.LogError("[DDSSequencer Converter Window] Error : Directory Not Found");
                 return;
             }
         }
@@ -81,7 +81,7 @@ internal static class TextureConverter
         {
             if(!File.Exists(path))
             {
-                Debug.LogError("Error : File Not Found");
+                Debug.LogError("[DDSSequencer Converter Window] Error : File Not Found");
                 return;
             }
         }
@@ -154,6 +154,8 @@ internal static class TextureConverter
 
         AssetDatabase.Refresh();
         _window.Repaint();
+
+        Debug.Log("[DDSSequencer Converter Window] Convert Process Complete");
     }
 
     static IEnumerator ConvertMovie(string src, string outPath, ExportSetting setting)
