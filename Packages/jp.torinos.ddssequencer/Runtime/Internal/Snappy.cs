@@ -13,8 +13,13 @@ public static class Snappy
     [DllImport("snappy", EntryPoint="decode_binary")]
     static extern IntPtr DecodeBinary(byte[] data, int size, out int dstSize);
 
-    // pointer returned from this function must be freed
-    // after use using Marshal.FreeCoTaskMem().
+    /// <summary>
+    /// pointer returned from this function must be freed
+    /// after use using Marshal.FreeCoTaskMem().
+    /// </summary>
+    /// <param name="src">Byte array to be compressed</param>
+    /// <param name="size">Size of compressed bytes</param>
+    /// <returns>Pointer to the beginning of a contiguous region of compressed bytes</returns>
     public static IntPtr EncodeToPtr(byte[] src, out int size)
     {
         IntPtr ptr = EncodeBinary(src, src.Length, out size);
@@ -37,8 +42,13 @@ public static class Snappy
         return data;
     }
 
-    // pointer returned from this function must be freed
-    // after use using Marshal.FreeCoTaskMem().
+    /// <summary>
+    /// pointer returned from this function must be freed
+    /// after use using Marshal.FreeCoTaskMem().
+    /// </summary>
+    /// <param name="src">Byte array to be decompressed</param>
+    /// <param name="size">Size of decompressed bytes</param>
+    /// <returns>Pointer to the beginning of a contiguous region of decompressed bytes</returns>
     public static IntPtr DecodeToPtr(byte[] src, out int size)
     {
         IntPtr ptr = DecodeBinary(src, src.Length, out size);
@@ -59,19 +69,6 @@ public static class Snappy
         Marshal.FreeCoTaskMem(ptr);
 
         return data;
-    }
-
-    internal static Texture2D DecodeTexture(byte[] src, int width, int height, TextureFormat format)
-    {
-        IntPtr ptr = DecodeToPtr(src, out var size);
-
-        Texture2D tex = new Texture2D(width, height, format, false);
-        tex.LoadRawTextureData(ptr, size);
-        tex.Apply();
-
-        Marshal.FreeCoTaskMem(ptr);
-
-        return tex;
     }
 }
 
