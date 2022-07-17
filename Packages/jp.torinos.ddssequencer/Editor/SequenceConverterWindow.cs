@@ -1,4 +1,5 @@
 using System.Linq;
+using System.IO;
 using UnityEngine;
 using UnityEditor;
 
@@ -114,21 +115,28 @@ public sealed class SeqnenceConverterWindow : EditorWindow
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            if(_existffmpeg)
+            if(_existffmpeg || _source == SequenceSource.Sequence)
             {
                 _srcPath = EditorGUILayout.TextField(_srcPath);
 
                 if(GUILayout.Button("Select", GUILayout.Width(80)))
                 {
+                    string startDir = _srcPath == string.Empty? Application.dataPath : Path.GetDirectoryName(_srcPath);
+                    var prevSrc = _srcPath;
+
                     _srcPath = _source == SequenceSource.Sequence ?
-                                            EditorUtility.OpenFolderPanel("Open", Application.dataPath, string.Empty) :
-                                            EditorUtility.OpenFilePanel("Open", Application.dataPath, string.Empty);
+                                            EditorUtility.OpenFolderPanel("Open", startDir, string.Empty) :
+                                            EditorUtility.OpenFilePanel("Open", startDir, string.Empty);
+
+                    if(_srcPath != prevSrc && _srcPath == string.Empty)
+                        _srcPath = prevSrc;
 
                     CheckDirectoryPath();
                 }
             }
             else
             {
+                _srcPath = string.Empty;
                 EditorGUILayout.LabelField("ffmpeg is Not Found", _boldLabel);
             }
         }

@@ -165,7 +165,7 @@ internal static class TextureConverter
         var info = new System.Diagnostics.ProcessStartInfo();
         info.FileName = "ffprobe";
         info.UseShellExecute = false;
-        info.Arguments = src + " -hide_banner -show_entries format=duration";
+        info.Arguments = @"""" + src + @"""" + " -hide_banner -show_entries format=duration";
         info.RedirectStandardOutput = true;
         info.CreateNoWindow = true;
 
@@ -181,7 +181,7 @@ internal static class TextureConverter
         Count = (int)((int)duration * setting.fps);
 
         info.FileName = "ffmpeg";
-        info.Arguments = "-i " +'"' + src + '"' + $" -r {setting.fps} -vcodec png {outPath}/imagesc/img_%06d.png";
+        info.Arguments = "-i " + @"""" + src + @"""" + $" -r {setting.fps} -vcodec png "+ @"""" + $"{outPath}/imagesc/{Path.GetFileNameWithoutExtension(src)}_%06d.png" + @"""";
         info.RedirectStandardOutput = false;
         info.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
 
@@ -211,7 +211,7 @@ internal static class TextureConverter
         {
             string fileName = Path.GetFileNameWithoutExtension(f);
 
-            batchArgs += @"""" + f  + @"""" + $" /f {(int)(setting.format)} /q {(int)(setting.quality)} /no-mips /dx10";
+            batchArgs += @"""" + f + @"""" + $" /f {(int)(setting.format)} /q {(int)(setting.quality)} /dx10";
             if(!setting.useCuda) batchArgs += " /no-cuda";
             if(!setting.mips) batchArgs += " /no-mips";
             else batchArgs += " /mips";
@@ -282,7 +282,7 @@ internal static class TextureConverter
         header[3] = headerByte[17];
         
         // mips
-        header[4] = (byte)(setting.mips ? 1 : 0);
+        header[4] = Convert.ToByte(setting.mips ? 1 : 0);
 
         // format
         header[5] = Convert.ToByte((int)setting.format);
@@ -296,11 +296,10 @@ internal static class TextureConverter
         {
             byte[] bytes = File.ReadAllBytes(DdsFiles[i]);
     
-            // Copy to buffer exclude dds header
-            byte[] dxtBytes = new byte[bytes.Length - DDS_HEADER_SIZE];
-            System.Buffer.BlockCopy(bytes, DDS_HEADER_SIZE, dxtBytes, 0, bytes.Length - DDS_HEADER_SIZE);
+            byte[] bcBytes = new byte[bytes.Length - DDS_HEADER_SIZE];
+            System.Buffer.BlockCopy(bytes, DDS_HEADER_SIZE, bcBytes, 0, bytes.Length - DDS_HEADER_SIZE);
 
-            byte[] snapBytes = Snappy.Encode(dxtBytes);
+            byte[] snapBytes = Snappy.Encode(bcBytes);
     
             string fileName = Path.GetFileNameWithoutExtension(DdsFiles[i]) + ".ddssc";
             File.WriteAllBytes(outPath + "/" + fileName, snapBytes);
@@ -333,7 +332,8 @@ internal static class TextureConverter
 
         PipelineCoroutine = ffmpegtCoroutine = ConvertCoroutine = OptimizeCoroutine = null;
 
-        _process?.Kill();
+        if(_process != null && !_process.HasExited) _process.Kill();
+
         _process = null;
 
         // Delete batch arg file
@@ -356,6 +356,9 @@ internal static class TextureConverter
             }
         });
 
+        if(IsProceeding || IsffmpegProcess || IsDdsProcess || IsOptProcess)
+            Debug.Log("[DDSSequencer Converter Window] Stop Convert Process");
+
         IsProceeding = false;
         IsffmpegProcess = false;
         IsDdsProcess = false;
@@ -373,6 +376,7 @@ internal static class TextureConverter
 
         return  extension == ".png" ||
                 extension == ".jpg" ||
+                extension == ".tiff"||
                 extension == ".exr" ||
                 extension == ".hdr" ||
                 extension == ".dds";
